@@ -1,0 +1,301 @@
+import React, { useState, useEffect } from 'react';
+import styled, { createGlobalStyle } from 'styled-components';
+
+const GlobalStyle = createGlobalStyle`
+  body {
+    background: #ffffff;
+    font-family: 'Pretendard', 'Noto Sans KR', sans-serif;
+    margin: 0;
+    min-height: 100vh;
+  }
+`;
+
+const Container = styled.div`
+  max-width: 95vw;
+  margin: 20px auto;
+  padding: 24px;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 20px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(10px);
+`;
+
+const Title = styled.h1`
+  color: #1e3a8a;
+  text-align: center;
+  margin-bottom: 40px;
+  font-size: 2.8rem;
+  font-weight: 700;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+`;
+
+const Table = styled.table`
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  background: #fff;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 4px 20px rgba(30, 58, 138, 0.15);
+  table-layout: fixed;
+`;
+
+const Th = styled.th`
+  background: #1e3a8a;
+  color: #fff;
+  padding: 16px 8px;
+  font-weight: 700;
+  font-size: 0.9rem;
+  border-right: 1px solid rgba(255, 255, 255, 0.2);
+  &:last-child { border-right: none; }
+  
+  &:nth-child(1) { width: 8%; } /* 이름 */
+  &:nth-child(2) { width: 8%; } /* 입사일 */
+  &:nth-child(3) { width: 6%; } /* 총 휴가 */
+  &:nth-child(4) { width: 6%; } /* 남은 휴가 */
+  &:nth-child(n+5) { width: 6%; } /* 월별 셀들 */
+`;
+
+const Td = styled.td`
+  padding: 12px 8px;
+  text-align: center;
+  border-bottom: 1px solid #e5e7eb;
+  background: #f8fafc;
+  font-size: 0.9rem;
+  &:nth-child(1) { 
+    font-weight: 600; 
+    color: #1e3a8a; 
+    background: #eff6ff;
+  }
+  &:nth-child(2) { color: #6b7280; }
+  &:nth-child(4) { 
+    font-weight: 600; 
+    color: #059669; 
+    background: #f0fdf4;
+  }
+`;
+
+const MonthCell = styled.td<{editable: boolean}>`
+  background: ${({ editable }) => (editable ? '#dbeafe' : '#f8fafc')};
+  cursor: ${({ editable }) => (editable ? 'pointer' : 'default')};
+  transition: all 0.2s;
+  padding: 8px 4px;
+  font-size: 0.85rem;
+  width: 6%;
+  
+  &:hover {
+    background: ${({ editable }) => (editable ? '#bfdbfe' : '#f1f5f9')};
+  }
+`;
+
+const Input = styled.textarea`
+  width: 80px;
+  height: 60px;
+  padding: 4px 6px;
+  border: 2px solid #3b82f6;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  text-align: center;
+  background: #fff;
+  color: #1e3a8a;
+  resize: none;
+  font-family: inherit;
+`;
+
+const InfoText = styled.div`
+  text-align: center;
+  color: #6b7280;
+  font-size: 0.9rem;
+  margin-bottom: 20px;
+  padding: 12px;
+  background: #f3f4f6;
+  border-radius: 8px;
+`;
+
+// 더미 데이터 - 10명 구성원
+const initialMembers = [
+  { name: '박시은', joinDate: '2024-01-01', totalVacation: 0, remaining: 0, months: Array(12).fill(0).map(() => ({ days: '', count: 0 })) },
+  { name: '유혜종', joinDate: '2024-06-01', totalVacation: 0, remaining: 0, months: Array(12).fill(0).map(() => ({ days: '', count: 0 })) },
+  { name: '고채린', joinDate: '2024-06-18', totalVacation: 0, remaining: 0, months: Array(12).fill(0).map(() => ({ days: '', count: 0 })) },
+  { name: '김나영', joinDate: '2024-09-02', totalVacation: 0, remaining: 0, months: Array(12).fill(0).map(() => ({ days: '', count: 0 })) },
+  { name: '조운지', joinDate: '2025-03-05', totalVacation: 0, remaining: 0, months: Array(12).fill(0).map(() => ({ days: '', count: 0 })) },
+  { name: '박윤하', joinDate: '2025-03-12', totalVacation: 0, remaining: 0, months: Array(12).fill(0).map(() => ({ days: '', count: 0 })) },
+  { name: '문지혜', joinDate: '2025-03-18', totalVacation: 0, remaining: 0, months: Array(12).fill(0).map(() => ({ days: '', count: 0 })) },
+  { name: '서예람', joinDate: '2025-03-30', totalVacation: 0, remaining: 0, months: Array(12).fill(0).map(() => ({ days: '', count: 0 })) },
+
+];
+
+type Member = typeof initialMembers[0];
+
+type EditState = {
+  memberIdx: number;
+  monthIdx: number;
+};
+
+// 근로기준법에 따른 휴가 계산 함수
+const calculateVacationDays = (joinDate: string): number => {
+  const join = new Date(joinDate);
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  
+  // 입사 후 경과 개월 수 계산
+  const monthsDiff = (currentYear - join.getFullYear()) * 12 + (now.getMonth() - join.getMonth());
+  
+  // 1년 미만 근로자 (입사 후 1개월부터 매달 1일씩, 최대 11일)
+  if (monthsDiff < 12) {
+    return Math.min(monthsDiff, 11);
+  }
+  
+  // 1년 이상 근로자
+  const yearsWorked = Math.floor(monthsDiff / 12);
+  
+  // 기본 15일
+  let vacationDays = 15;
+  
+  // 3년차부터는 2년에 1일씩 추가 (최대 25일까지)
+  if (yearsWorked >= 3) {
+    const additionalDays = Math.floor((yearsWorked - 2) / 2);
+    vacationDays = Math.min(15 + additionalDays, 25);
+  }
+  
+  return vacationDays;
+};
+
+function App() {
+  const [members, setMembers] = useState<Member[]>(() => {
+    // 초기화 시 입사일 기준으로 휴가 계산
+    return initialMembers.map(member => {
+      const totalVacation = calculateVacationDays(member.joinDate);
+      return {
+        ...member,
+        totalVacation,
+        remaining: totalVacation
+      };
+    });
+  });
+  const [edit, setEdit] = useState<EditState | null>(null);
+  const [inputValue, setInputValue] = useState('');
+
+  // 날짜 문자열을 파싱하여 개수 계산
+  const parseDaysToCount = (daysStr: string): number => {
+    if (!daysStr.trim()) return 0;
+    const days = daysStr.split(',').map(d => d.trim()).filter(d => d);
+    return days.length;
+  };
+
+  // 멤버의 총 사용 휴가 계산
+  const calculateTotalUsed = (member: Member): number => {
+    return member.months.reduce((total, month) => total + month.count, 0);
+  };
+
+  // 남은 휴가 자동 업데이트
+  useEffect(() => {
+    setMembers(prev => prev.map(member => ({
+      ...member,
+      remaining: member.totalVacation - calculateTotalUsed(member)
+    })));
+  }, []);
+
+  const handleCellClick = (memberIdx: number, monthIdx: number) => {
+    setEdit({ memberIdx, monthIdx });
+    setInputValue(members[memberIdx].months[monthIdx].days);
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setInputValue(e.target.value);
+  };
+
+  const handleInputBlur = () => {
+    if (edit) {
+      const newCount = parseDaysToCount(inputValue);
+      
+      setMembers(prev => {
+        const updated = [...prev];
+        const member = { ...updated[edit.memberIdx] };
+        member.months = [...member.months];
+        member.months[edit.monthIdx] = { 
+          days: inputValue, 
+          count: newCount 
+        };
+        
+        // 남은 휴가 재계산
+        const totalUsed = member.months.reduce((total, month) => total + month.count, 0);
+        member.remaining = member.totalVacation - totalUsed;
+        
+        updated[edit.memberIdx] = member;
+        return updated;
+      });
+      setEdit(null);
+    }
+  };
+
+  const handleInputKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && e.ctrlKey) {
+      handleInputBlur();
+    }
+  };
+
+  return (
+    <>
+      <GlobalStyle />
+      <Container>
+        <Title>🏖️ 랩포디엑스 휴가 관리 대시보드</Title>
+        <InfoText>
+          💡 월별 셀을 클릭하여 휴가 사용일을 입력하세요. 여러 날짜는 쉼표(,)로 구분하세요. (예: 15, 22, 29)
+        </InfoText>
+        <Table>
+          <thead>
+            <tr>
+              <Th>이름</Th>
+              <Th>입사일</Th>
+              <Th>총 휴가</Th>
+              <Th>남은 휴가</Th>
+              {Array.from({ length: 12 }, (_, i) => (
+                <Th key={i}>{i + 1}월</Th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {members.map((member, memberIdx) => (
+              <tr key={member.name}>
+                <Td>{member.name}</Td>
+                <Td>{member.joinDate}</Td>
+                <Td>{member.totalVacation}일</Td>
+                <Td>{member.remaining}일</Td>
+                {member.months.map((month, monthIdx) => (
+                  <MonthCell
+                    key={monthIdx}
+                    editable={true}
+                    onClick={() => handleCellClick(memberIdx, monthIdx)}
+                  >
+                    {edit && edit.memberIdx === memberIdx && edit.monthIdx === monthIdx ? (
+                      <Input
+                        autoFocus
+                        value={inputValue}
+                        onChange={handleInputChange}
+                        onBlur={handleInputBlur}
+                        onKeyDown={handleInputKeyDown}
+                        placeholder="날짜 입력"
+                      />
+                    ) : (
+                      <div>
+                        <div style={{ color: '#1e3a8a', fontWeight: 500, marginBottom: '4px' }}>
+                          {month.days || '-'}
+                        </div>
+                        <div style={{ color: '#059669', fontWeight: 700, fontSize: '0.8rem' }}>
+                          {month.count}회
+                        </div>
+                      </div>
+                    )}
+                  </MonthCell>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </Table>
+      </Container>
+    </>
+  );
+}
+
+export default App;

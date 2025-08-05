@@ -162,8 +162,13 @@ const calculateVacationDays = (joinDate: string): number => {
 };
 
 function App() {
+  // 1. 상태 초기화 시 localStorage에서 불러오기
   const [members, setMembers] = useState<Member[]>(() => {
-    // 초기화 시 입사일 기준으로 휴가 계산
+    const saved = localStorage.getItem('members');
+    if (saved) {
+      return JSON.parse(saved);
+    }
+    // 기존 초기화 코드
     return initialMembers.map(member => {
       const totalVacation = calculateVacationDays(member.joinDate);
       return {
@@ -175,6 +180,11 @@ function App() {
   });
   const [edit, setEdit] = useState<EditState | null>(null);
   const [inputValue, setInputValue] = useState('');
+
+  // 2. members가 바뀔 때마다 localStorage에 저장
+  useEffect(() => {
+    localStorage.setItem('members', JSON.stringify(members));
+  }, [members]);
 
   // 날짜 문자열을 파싱하여 개수 계산
   const parseDaysToCount = (daysStr: string): number => {

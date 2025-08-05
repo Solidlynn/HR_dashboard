@@ -260,6 +260,10 @@ function App() {
     }
   };
 
+  if (loading || !members) {
+    return <div style={{textAlign: 'center', marginTop: '100px'}}>로딩 중...</div>;
+  }
+
   return (
     <>
       <GlobalStyle />
@@ -281,12 +285,7 @@ function App() {
             </tr>
           </thead>
           <tbody>
-            {loading ? (
-              <tr>
-                <Td colSpan={13}>Loading...</Td>
-              </tr>
-            ) : members ? (
-              members.map((member, memberIdx) => (
+            {members.map((member, memberIdx) => (
                 <tr key={member.name}>
                   <Td>{member.name}</Td>
                   <Td>{member.joinDate}</Td>
@@ -320,12 +319,7 @@ function App() {
                     </MonthCell>
                   ))}
                 </tr>
-              ))
-            ) : (
-              <tr>
-                <Td colSpan={13}>No members found.</Td>
-              </tr>
-            )}
+              ))}
           </tbody>
         </Table>
       </Container>

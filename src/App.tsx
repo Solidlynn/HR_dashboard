@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import styled, { createGlobalStyle } from 'styled-components';
+import { db } from './firebase';
+import { collection, getDocs, setDoc, doc } from 'firebase/firestore';
 
 const GlobalStyle = createGlobalStyle`
   body {
@@ -162,28 +164,41 @@ const calculateVacationDays = (joinDate: string): number => {
 };
 
 function App() {
-  // 1. 상태 초기화 시 localStorage에서 불러오기
-  const [members, setMembers] = useState<Member[]>(() => {
-    const saved = localStorage.getItem('members');
-    if (saved) {
-      return JSON.parse(saved);
-    }
-    // 기존 초기화 코드
-    return initialMembers.map(member => {
-      const totalVacation = calculateVacationDays(member.joinDate);
-      return {
-        ...member,
-        totalVacation,
-        remaining: totalVacation
-      };
-    });
-  });
+  const [members, setMembers] = useState<Member[] | null>(null);
+  const [loading, setLoading] = useState(true);
   const [edit, setEdit] = useState<EditState | null>(null);
   const [inputValue, setInputValue] = useState('');
 
-  // 2. members가 바뀔 때마다 localStorage에 저장
+  // Firestore에서 데이터 불러오기
   useEffect(() => {
-    localStorage.setItem('members', JSON.stringify(members));
+    async function fetchData() {
+      const snapshot = await getDocs(collection(db, 'members'));
+      if (!snapshot.empty) {
+        const arr = snapshot.docs.map(doc => doc.data() as Member);
+        setMembers(arr);
+      } else {
+        // Firestore에 데이터가 없으면 초기값 사용
+        setMembers(initialMembers.map(member => {
+          const totalVacation = calculateVacationDays(member.joinDate);
+          return {
+            ...member,
+            totalVacation,
+            remaining: totalVacation
+          };
+        }));
+      }
+      setLoading(false);
+    }
+    fetchData();
+  }, []);
+
+  // members가 바뀔 때마다 Firestore에 저장
+  useEffect(() => {
+    if (members) {
+      members.forEach(async (member, idx) => {
+        await setDoc(doc(db, 'members', String(idx)), member);
+      });
+    }
   }, [members]);
 
   // 날짜 문자열을 파싱하여 개수 계산
@@ -200,7 +215,7 @@ function App() {
 
   // 남은 휴가 자동 업데이트
   useEffect(() => {
-    setMembers(prev => prev.map(member => ({
+    setMembers(prev => prev!.map(member => ({
       ...member,
       remaining: member.totalVacation - calculateTotalUsed(member)
     })));
@@ -208,7 +223,7 @@ function App() {
 
   const handleCellClick = (memberIdx: number, monthIdx: number) => {
     setEdit({ memberIdx, monthIdx });
-    setInputValue(members[memberIdx].months[monthIdx].days);
+    setInputValue(members![memberIdx].months[monthIdx].days);
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -220,7 +235,7 @@ function App() {
       const newCount = parseDaysToCount(inputValue);
       
       setMembers(prev => {
-        const updated = [...prev];
+        const updated = [...prev!];
         const member = { ...updated[edit.memberIdx] };
         member.months = [...member.months];
         member.months[edit.monthIdx] = { 
@@ -266,41 +281,51 @@ function App() {
             </tr>
           </thead>
           <tbody>
-            {members.map((member, memberIdx) => (
-              <tr key={member.name}>
-                <Td>{member.name}</Td>
-                <Td>{member.joinDate}</Td>
-                <Td>{member.totalVacation}일</Td>
-                <Td>{member.remaining}일</Td>
-                {member.months.map((month, monthIdx) => (
-                  <MonthCell
-                    key={monthIdx}
-                    editable={true}
-                    onClick={() => handleCellClick(memberIdx, monthIdx)}
-                  >
-                    {edit && edit.memberIdx === memberIdx && edit.monthIdx === monthIdx ? (
-                      <Input
-                        autoFocus
-                        value={inputValue}
-                        onChange={handleInputChange}
-                        onBlur={handleInputBlur}
-                        onKeyDown={handleInputKeyDown}
-                        placeholder="날짜 입력"
-                      />
-                    ) : (
-                      <div>
-                        <div style={{ color: '#1e3a8a', fontWeight: 500, marginBottom: '4px' }}>
-                          {month.days || '-'}
-                        </div>
-                        <div style={{ color: '#059669', fontWeight: 700, fontSize: '0.8rem' }}>
-                          {month.count}회
-                        </div>
-                      </div>
-                    )}
-                  </MonthCell>
-                ))}
+            {loading ? (
+              <tr>
+                <Td colSpan={13}>Loading...</Td>
               </tr>
-            ))}
+            ) : members ? (
+              members.map((member, memberIdx) => (
+                <tr key={member.name}>
+                  <Td>{member.name}</Td>
+                  <Td>{member.joinDate}</Td>
+                  <Td>{member.totalVacation}일</Td>
+                  <Td>{member.remaining}일</Td>
+                  {member.months.map((month, monthIdx) => (
+                    <MonthCell
+                      key={monthIdx}
+                      editable={true}
+                      onClick={() => handleCellClick(memberIdx, monthIdx)}
+                    >
+                      {edit && edit.memberIdx === memberIdx && edit.monthIdx === monthIdx ? (
+                        <Input
+                          autoFocus
+                          value={inputValue}
+                          onChange={handleInputChange}
+                          onBlur={handleInputBlur}
+                          onKeyDown={handleInputKeyDown}
+                          placeholder="날짜 입력"
+                        />
+                      ) : (
+                        <div>
+                          <div style={{ color: '#1e3a8a', fontWeight: 500, marginBottom: '4px' }}>
+                            {month.days || '-'}
+                          </div>
+                          <div style={{ color: '#059669', fontWeight: 700, fontSize: '0.8rem' }}>
+                            {month.count}회
+                          </div>
+                        </div>
+                      )}
+                    </MonthCell>
+                  ))}
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <Td colSpan={13}>No members found.</Td>
+              </tr>
+            )}
           </tbody>
         </Table>
       </Container>

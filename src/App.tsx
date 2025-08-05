@@ -215,15 +215,17 @@ function App() {
 
   // 남은 휴가 자동 업데이트
   useEffect(() => {
-    setMembers(prev => prev!.map(member => ({
+    if (!members) return;
+    setMembers(prev => prev ? prev.map(member => ({
       ...member,
       remaining: member.totalVacation - calculateTotalUsed(member)
-    })));
-  }, []);
+    })) : null);
+  }, [members]);
 
   const handleCellClick = (memberIdx: number, monthIdx: number) => {
+    if (!members) return;
     setEdit({ memberIdx, monthIdx });
-    setInputValue(members![memberIdx].months[monthIdx].days);
+    setInputValue(members[memberIdx].months[monthIdx].days);
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -231,22 +233,20 @@ function App() {
   };
 
   const handleInputBlur = () => {
-    if (edit) {
+    if (edit && members) {
       const newCount = parseDaysToCount(inputValue);
-      
       setMembers(prev => {
-        const updated = [...prev!];
+        if (!prev) return prev;
+        const updated = [...prev];
         const member = { ...updated[edit.memberIdx] };
         member.months = [...member.months];
-        member.months[edit.monthIdx] = { 
-          days: inputValue, 
-          count: newCount 
+        member.months[edit.monthIdx] = {
+          days: inputValue,
+          count: newCount
         };
-        
         // 남은 휴가 재계산
         const totalUsed = member.months.reduce((total, month) => total + month.count, 0);
         member.remaining = member.totalVacation - totalUsed;
-        
         updated[edit.memberIdx] = member;
         return updated;
       });
@@ -260,6 +260,7 @@ function App() {
     }
   };
 
+  // 렌더링 시 members가 null이면 로딩 메시지, 아니면 map 사용
   if (loading || !members) {
     return <div style={{textAlign: 'center', marginTop: '100px'}}>로딩 중...</div>;
   }
@@ -286,40 +287,40 @@ function App() {
           </thead>
           <tbody>
             {members.map((member, memberIdx) => (
-                <tr key={member.name}>
-                  <Td>{member.name}</Td>
-                  <Td>{member.joinDate}</Td>
-                  <Td>{member.totalVacation}일</Td>
-                  <Td>{member.remaining}일</Td>
-                  {member.months.map((month, monthIdx) => (
-                    <MonthCell
-                      key={monthIdx}
-                      editable={true}
-                      onClick={() => handleCellClick(memberIdx, monthIdx)}
-                    >
-                      {edit && edit.memberIdx === memberIdx && edit.monthIdx === monthIdx ? (
-                        <Input
-                          autoFocus
-                          value={inputValue}
-                          onChange={handleInputChange}
-                          onBlur={handleInputBlur}
-                          onKeyDown={handleInputKeyDown}
-                          placeholder="날짜 입력"
-                        />
-                      ) : (
-                        <div>
-                          <div style={{ color: '#1e3a8a', fontWeight: 500, marginBottom: '4px' }}>
-                            {month.days || '-'}
-                          </div>
-                          <div style={{ color: '#059669', fontWeight: 700, fontSize: '0.8rem' }}>
-                            {month.count}회
-                          </div>
+              <tr key={member.name}>
+                <Td>{member.name}</Td>
+                <Td>{member.joinDate}</Td>
+                <Td>{member.totalVacation}일</Td>
+                <Td>{member.remaining}일</Td>
+                {member.months.map((month, monthIdx) => (
+                  <MonthCell
+                    key={monthIdx}
+                    editable={true}
+                    onClick={() => handleCellClick(memberIdx, monthIdx)}
+                  >
+                    {edit && edit.memberIdx === memberIdx && edit.monthIdx === monthIdx ? (
+                      <Input
+                        autoFocus
+                        value={inputValue}
+                        onChange={handleInputChange}
+                        onBlur={handleInputBlur}
+                        onKeyDown={handleInputKeyDown}
+                        placeholder="날짜 입력"
+                      />
+                    ) : (
+                      <div>
+                        <div style={{ color: '#1e3a8a', fontWeight: 500, marginBottom: '4px' }}>
+                          {month.days || '-'}
                         </div>
-                      )}
-                    </MonthCell>
-                  ))}
-                </tr>
-              ))}
+                        <div style={{ color: '#059669', fontWeight: 700, fontSize: '0.8rem' }}>
+                          {month.count}회
+                        </div>
+                      </div>
+                    )}
+                  </MonthCell>
+                ))}
+              </tr>
+            ))}
           </tbody>
         </Table>
       </Container>

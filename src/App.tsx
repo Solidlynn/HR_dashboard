@@ -213,14 +213,10 @@ function App() {
     return member.months.reduce((total, month) => total + month.count, 0);
   };
 
-  // 남은 휴가 자동 업데이트
-  useEffect(() => {
-    if (!members) return;
-    setMembers(prev => prev ? prev.map(member => ({
-      ...member,
-      remaining: member.totalVacation - calculateTotalUsed(member)
-    })) : null);
-  }, [members]);
+  // 남은 휴가 계산 함수 추가
+  const getRemaining = (member: Member) => {
+    return member.totalVacation - calculateTotalUsed(member);
+  };
 
   const handleCellClick = (memberIdx: number, monthIdx: number) => {
     if (!members) return;
@@ -286,12 +282,12 @@ function App() {
             </tr>
           </thead>
           <tbody>
-            {members.map((member, memberIdx) => (
+            {members && members.map((member, memberIdx) => (
               <tr key={member.name}>
                 <Td>{member.name}</Td>
                 <Td>{member.joinDate}</Td>
                 <Td>{member.totalVacation}일</Td>
-                <Td>{member.remaining}일</Td>
+                <Td>{getRemaining(member)}일</Td>
                 {member.months.map((month, monthIdx) => (
                   <MonthCell
                     key={monthIdx}

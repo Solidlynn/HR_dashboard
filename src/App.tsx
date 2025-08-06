@@ -114,17 +114,20 @@ const InfoText = styled.div`
   border-radius: 8px;
 `;
 
-// 더미 데이터 - 10명 구성원
+// 구성원
 const initialMembers = [
-  { name: '박시은', joinDate: '2024-01-01', totalVacation: 0, remaining: 0, months: Array(12).fill(0).map(() => ({ days: '', count: 0 })) },
-  { name: '유혜종', joinDate: '2024-06-01', totalVacation: 0, remaining: 0, months: Array(12).fill(0).map(() => ({ days: '', count: 0 })) },
-  { name: '고채린', joinDate: '2024-06-18', totalVacation: 0, remaining: 0, months: Array(12).fill(0).map(() => ({ days: '', count: 0 })) },
-  { name: '김나영', joinDate: '2024-09-02', totalVacation: 0, remaining: 0, months: Array(12).fill(0).map(() => ({ days: '', count: 0 })) },
-  { name: '조운지', joinDate: '2025-03-05', totalVacation: 0, remaining: 0, months: Array(12).fill(0).map(() => ({ days: '', count: 0 })) },
-  { name: '박윤하', joinDate: '2025-03-12', totalVacation: 0, remaining: 0, months: Array(12).fill(0).map(() => ({ days: '', count: 0 })) },
-  { name: '문지혜', joinDate: '2025-03-18', totalVacation: 0, remaining: 0, months: Array(12).fill(0).map(() => ({ days: '', count: 0 })) },
-  { name: '서예람', joinDate: '2025-03-30', totalVacation: 0, remaining: 0, months: Array(12).fill(0).map(() => ({ days: '', count: 0 })) },
-
+  { name: '김진웅', joinDate: '2021-05-10', totalVacation: 0, carryoverVacation: 0, remaining: 0, months: Array(12).fill(0).map(() => ({ days: '', count: 0 })) },
+  { name: '최태완', joinDate: '2021-05-10', totalVacation: 0, carryoverVacation: 0, remaining: 0, months: Array(12).fill(0).map(() => ({ days: '', count: 0 })) },
+  { name: '한진수', joinDate: '2021-05-10', totalVacation: 0, carryoverVacation: 0, remaining: 0, months: Array(12).fill(0).map(() => ({ days: '', count: 0 })) },
+  { name: '이정환', joinDate: '2022-04-20', totalVacation: 0, carryoverVacation: 0, remaining: 0, months: Array(12).fill(0).map(() => ({ days: '', count: 0 })) },
+  { name: '박시은', joinDate: '2024-01-01', totalVacation: 0, carryoverVacation: 0, remaining: 0, months: Array(12).fill(0).map(() => ({ days: '', count: 0 })) },
+  { name: '유혜종', joinDate: '2024-06-01', totalVacation: 0, carryoverVacation: 0, remaining: 0, months: Array(12).fill(0).map(() => ({ days: '', count: 0 })) },
+  { name: '고채린', joinDate: '2024-06-18', totalVacation: 0, carryoverVacation: 0, remaining: 0, months: Array(12).fill(0).map(() => ({ days: '', count: 0 })) },
+  { name: '김나영', joinDate: '2024-09-02', totalVacation: 0, carryoverVacation: 0, remaining: 0, months: Array(12).fill(0).map(() => ({ days: '', count: 0 })) },
+  { name: '조운지', joinDate: '2025-03-05', totalVacation: 0, carryoverVacation: 0, remaining: 0, months: Array(12).fill(0).map(() => ({ days: '', count: 0 })) },
+  { name: '박윤하', joinDate: '2025-03-12', totalVacation: 0, carryoverVacation: 0, remaining: 0, months: Array(12).fill(0).map(() => ({ days: '', count: 0 })) },
+  { name: '문지혜', joinDate: '2025-03-18', totalVacation: 0, carryoverVacation: 0, remaining: 0, months: Array(12).fill(0).map(() => ({ days: '', count: 0 })) },
+  { name: '서예람', joinDate: '2025-03-30', totalVacation: 0, carryoverVacation: 0, remaining: 0, months: Array(12).fill(0).map(() => ({ days: '', count: 0 })) },
 ];
 
 type Member = typeof initialMembers[0];
@@ -201,11 +204,23 @@ function App() {
     }
   }, [members]);
 
-  // 날짜 문자열을 파싱하여 개수 계산
+  // 날짜 문자열을 파싱하여 개수 계산 (반차 지원)
   const parseDaysToCount = (daysStr: string): number => {
     if (!daysStr.trim()) return 0;
     const days = daysStr.split(',').map(d => d.trim()).filter(d => d);
-    return days.length;
+    let totalCount = 0;
+    
+    days.forEach(day => {
+      if (day.endsWith('*')) {
+        // 반차: 0.5일
+        totalCount += 0.5;
+      } else {
+        // 일반 휴가: 1일
+        totalCount += 1;
+      }
+    });
+    
+    return totalCount;
   };
 
   // 멤버의 총 사용 휴가 계산
@@ -213,9 +228,14 @@ function App() {
     return member.months.reduce((total, month) => total + month.count, 0);
   };
 
-  // 남은 휴가 계산 함수 추가
+  // 총 휴가 계산 (발생휴가 + 이월휴가)
+  const getTotalVacation = (member: Member) => {
+    return member.totalVacation + (member.carryoverVacation || 0);
+  };
+
+  // 남은 휴가 계산 함수 수정
   const getRemaining = (member: Member) => {
-    return member.totalVacation - calculateTotalUsed(member);
+    return getTotalVacation(member) - calculateTotalUsed(member);
   };
 
   const handleCellClick = (memberIdx: number, monthIdx: number) => {
@@ -256,6 +276,21 @@ function App() {
     }
   };
 
+  // 이월휴가 입력 처리 함수
+  const handleCarryoverChange = (memberIdx: number, value: string) => {
+    if (!members) return;
+    const carryoverValue = parseFloat(value) || 0;
+    
+    setMembers(prev => {
+      if (!prev) return prev;
+      const updated = [...prev];
+      const member = { ...updated[memberIdx] };
+      member.carryoverVacation = carryoverValue;
+      updated[memberIdx] = member;
+      return updated;
+    });
+  };
+
   // 렌더링 시 members가 null이면 로딩 메시지, 아니면 map 사용
   if (loading || !members) {
     return <div style={{textAlign: 'center', marginTop: '100px'}}>로딩 중...</div>;
@@ -267,13 +302,15 @@ function App() {
       <Container>
         <Title>🏖️ 랩포디엑스 휴가 관리 대시보드</Title>
         <InfoText>
-          💡 월별 셀을 클릭하여 휴가 사용일을 입력하세요. 여러 날짜는 쉼표(,)로 구분하세요. (예: 15, 22, 29)
+          💡 월별 셀을 클릭하여 휴가 사용일을 입력하세요. 여러 날짜는 쉼표(,)로 구분하세요. 반차는 날짜 뒤에 *를 붙이세요. (예: 15, 22*, 29)
         </InfoText>
         <Table>
           <thead>
             <tr>
               <Th>이름</Th>
               <Th>입사일</Th>
+              <Th>발생 휴가</Th>
+              <Th>이월 휴가</Th>
               <Th>총 휴가</Th>
               <Th>남은 휴가</Th>
               {Array.from({ length: 12 }, (_, i) => (
@@ -287,6 +324,16 @@ function App() {
                 <Td>{member.name}</Td>
                 <Td>{member.joinDate}</Td>
                 <Td>{member.totalVacation}일</Td>
+                <Td>
+                  <input
+                    type="number"
+                    value={member.carryoverVacation || 0}
+                    onChange={(e) => handleCarryoverChange(memberIdx, e.target.value)}
+                    style={{ width: '60px', height: '30px', fontSize: '0.8rem', textAlign: 'center', border: '1px solid #ccc', borderRadius: '4px' }}
+                    placeholder="0"
+                  />
+                </Td>
+                <Td>{getTotalVacation(member)}일</Td>
                 <Td>{getRemaining(member)}일</Td>
                 {member.months.map((month, monthIdx) => (
                   <MonthCell

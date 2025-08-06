@@ -178,7 +178,23 @@ function App() {
       const snapshot = await getDocs(collection(db, 'members'));
       if (!snapshot.empty) {
         const arr = snapshot.docs.map(doc => doc.data() as Member);
-        setMembers(arr);
+        // 기존 데이터가 있지만 새로운 멤버들을 포함하도록 병합
+        const existingMembers = new Map(arr.map(member => [member.name, member]));
+        const allMembers = initialMembers.map(member => {
+          const existing = existingMembers.get(member.name);
+          if (existing) {
+            return existing;
+          } else {
+            // 새로운 멤버는 초기값으로 설정
+            const totalVacation = calculateVacationDays(member.joinDate);
+            return {
+              ...member,
+              totalVacation,
+              remaining: totalVacation
+            };
+          }
+        });
+        setMembers(allMembers);
       } else {
         // Firestore에 데이터가 없으면 초기값 사용
         setMembers(initialMembers.map(member => {
@@ -311,7 +327,6 @@ function App() {
               <Th>입사일</Th>
               <Th>발생 휴가</Th>
               <Th>이월 휴가</Th>
-              <Th>총 휴가</Th>
               <Th>남은 휴가</Th>
               {Array.from({ length: 12 }, (_, i) => (
                 <Th key={i}>{i + 1}월</Th>
@@ -333,7 +348,6 @@ function App() {
                     placeholder="0"
                   />
                 </Td>
-                <Td>{getTotalVacation(member)}일</Td>
                 <Td>{getRemaining(member)}일</Td>
                 {member.months.map((month, monthIdx) => (
                   <MonthCell

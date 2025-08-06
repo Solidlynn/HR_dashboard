@@ -2118,7 +2118,7 @@ This typically indicates that your device does not have a healthy Internet conne
     background: #eff6ff;
   }
   &:nth-child(2) { color: #6b7280; }
-  &:nth-child(4) { 
+  &:nth-child(6) { 
     font-weight: 600; 
     color: #059669; 
     background: #f0fdf4;

@@ -123,11 +123,11 @@ const initialMembers = [
   { name: '박시은', joinDate: '2024-01-01', totalVacation: 0, carryoverVacation: 0, remaining: 0, months: Array(12).fill(0).map(() => ({ days: '', count: 0 })) },
   { name: '유혜종', joinDate: '2024-06-01', totalVacation: 0, carryoverVacation: 0, remaining: 0, months: Array(12).fill(0).map(() => ({ days: '', count: 0 })) },
   { name: '고채린', joinDate: '2024-06-18', totalVacation: 0, carryoverVacation: 0, remaining: 0, months: Array(12).fill(0).map(() => ({ days: '', count: 0 })) },
-  { name: '김나영', joinDate: '2025-01-01', totalVacation: 0, carryoverVacation: 0, remaining: 0, months: Array(12).fill(0).map(() => ({ days: '', count: 0 })) },
-  { name: '조운지', joinDate: '2025-03-05', totalVacation: 0, carryoverVacation: 0, remaining: 0, months: Array(12).fill(0).map(() => ({ days: '', count: 0 })) },
-  { name: '박윤하', joinDate: '2025-03-12', totalVacation: 0, carryoverVacation: 0, remaining: 0, months: Array(12).fill(0).map(() => ({ days: '', count: 0 })) },
-  { name: '문지혜', joinDate: '2025-03-18', totalVacation: 0, carryoverVacation: 0, remaining: 0, months: Array(12).fill(0).map(() => ({ days: '', count: 0 })) },
-  { name: '서예람', joinDate: '2025-03-30', totalVacation: 0, carryoverVacation: 0, remaining: 0, months: Array(12).fill(0).map(() => ({ days: '', count: 0 })) },
+  { name: '김나영', joinDate: '2024-09-02', totalVacation: 0, carryoverVacation: 0, remaining: 0, months: Array(12).fill(0).map(() => ({ days: '', count: 0 })) },
+  { name: '조운지', joinDate: '2025-03-12', totalVacation: 0, carryoverVacation: 0, remaining: 0, months: Array(12).fill(0).map(() => ({ days: '', count: 0 })) },
+  { name: '박윤하', joinDate: '2025-04-01', totalVacation: 0, carryoverVacation: 0, remaining: 0, months: Array(12).fill(0).map(() => ({ days: '', count: 0 })) },
+  { name: '문지혜', joinDate: '2025-05-26', totalVacation: 0, carryoverVacation: 0, remaining: 0, months: Array(12).fill(0).map(() => ({ days: '', count: 0 })) },
+  { name: '서예람', joinDate: '2025-06-01', totalVacation: 0, carryoverVacation: 0, remaining: 0, months: Array(12).fill(0).map(() => ({ days: '', count: 0 })) },
 ];
 
 type Member = typeof initialMembers[0];

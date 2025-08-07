@@ -176,70 +176,74 @@ function App() {
       const snapshot = await getDocs(collection(db, 'members'));
       if (!snapshot.empty) {
         const arr = snapshot.docs.map(doc => doc.data() as Member);
-        // 기존 데이터가 있지만 새로운 멤버들을 포함하도록 병합
         const existingMembers = new Map(arr.map(member => [member.name, member]));
+  
         const allMembers = initialMembers.map(member => {
           const existing = existingMembers.get(member.name);
+          const joinDate = member.joinDate;
+          const totalVacation = calculateVacationDays(joinDate);
+  
           if (existing) {
-            return {existing,
-                joinDate: member.joinDate,
+            const carryoverVacation = existing.carryoverVacation || 0;
+            const months = existing.months || Array(12).fill(0).map(() => ({ days: '', count: 0 }));
+            const used = months.reduce((sum, m) => sum + m.count, 0);
+            const remaining = totalVacation + carryoverVacation - used;
+  
+            return {
+              ...existing,
+              joinDate,
+              totalVacation,
+              carryoverVacation,
+              remaining,
+              months
             };
           } else {
-            // 새로운 멤버는 초기값으로 설정
-            const totalVacation = calculateVacationDays(member.joinDate);
+            const months = Array(12).fill(0).map(() => ({ days: '', count: 0 }));
+            const carryoverVacation = 0;
+            const remaining = totalVacation;
+  
             return {
               ...member,
               totalVacation,
-              remaining: totalVacation
+              carryoverVacation,
+              remaining,
+              months
             };
           }
         });
-        // allMembers 배열이 Member 타입 배열이 되도록 변환
-        setMembers(
-          allMembers.map(item => {
-            if ('existing' in item && item.existing) {
-              const merged = item as { existing: Member; joinDate: string; totalVacation: number };
-              return {
-                ...merged.existing,
-                joinDate: merged.joinDate,
-                totalVacation: merged.totalVacation,
-                remaining: merged.existing.remaining,
-                months: merged.existing.months,
-                carryoverVacation: merged.existing.carryoverVacation,
-              };
-            }
-            // 기존 멤버가 아니면 그대로 반환
-            return item;
-          }));
-       
-
-      
-        // 삭제 대상 찾기: Firestore에는 있는데 initialMembers에는 없는 경우
-      const initialNames = new Set(initialMembers.map(m => m.name));
-      const toDelete = arr.filter(m => !initialNames.has(m.name));
-
-      // Firestore에서 삭제
-      for (const member of toDelete) {
-        const docRef = snapshot.docs.find(doc => doc.data().name === member.name);
-        if (docRef) {
-          await deleteDoc(doc(db, 'members', docRef.id));
+  
+        setMembers(allMembers);
+  
+        // Firestore에 존재하지만 initialMembers에 없는 멤버 삭제
+        const initialNames = new Set(initialMembers.map(m => m.name));
+        const toDelete = arr.filter(m => !initialNames.has(m.name));
+  
+        for (const member of toDelete) {
+          const docRef = snapshot.docs.find(doc => doc.data().name === member.name);
+          if (docRef) {
+            await deleteDoc(doc(db, 'members', docRef.id));
+          }
         }
-      }
       } else {
         // Firestore에 데이터가 없으면 초기값 사용
         setMembers(initialMembers.map(member => {
           const totalVacation = calculateVacationDays(member.joinDate);
+          const months = Array(12).fill(0).map(() => ({ days: '', count: 0 }));
           return {
             ...member,
             totalVacation,
-            remaining: totalVacation
+            carryoverVacation: 0,
+            remaining: totalVacation,
+            months
           };
         }));
       }
       setLoading(false);
     }
+  
     fetchData();
   }, []);
+  
 
   // members가 바뀔 때마다 Firestore에 저장
   useEffect(() => {

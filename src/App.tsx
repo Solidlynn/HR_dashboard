@@ -203,6 +203,9 @@ function App() {
                 ...merged.existing,
                 joinDate: merged.joinDate,
                 totalVacation: merged.totalVacation,
+                remaining: merged.existing.remaining,
+                months: merged.existing.months,
+                carryoverVacation: merged.existing.carryoverVacation,
               };
             }
             // 기존 멤버가 아니면 그대로 반환

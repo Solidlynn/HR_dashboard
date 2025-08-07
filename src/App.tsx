@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import styled, { createGlobalStyle } from 'styled-components';
 import { db } from './firebase';
-import { collection, getDocs, setDoc, doc } from 'firebase/firestore';
+
+// 한번에 import하세요
+import { collection, getDocs, setDoc, deleteDoc, doc } from 'firebase/firestore';
 
 const GlobalStyle = createGlobalStyle`
   body {
@@ -116,10 +118,6 @@ const InfoText = styled.div`
 
 // 구성원
 const initialMembers = [
-  { name: '김진웅', joinDate: '2021-05-10', totalVacation: 0, carryoverVacation: 0, remaining: 0, months: Array(12).fill(0).map(() => ({ days: '', count: 0 })) },
-  { name: '최태완', joinDate: '2021-05-10', totalVacation: 0, carryoverVacation: 0, remaining: 0, months: Array(12).fill(0).map(() => ({ days: '', count: 0 })) },
-  { name: '한진수', joinDate: '2021-05-10', totalVacation: 0, carryoverVacation: 0, remaining: 0, months: Array(12).fill(0).map(() => ({ days: '', count: 0 })) },
-  { name: '이정환', joinDate: '2022-04-20', totalVacation: 0, carryoverVacation: 0, remaining: 0, months: Array(12).fill(0).map(() => ({ days: '', count: 0 })) },
   { name: '박시은', joinDate: '2024-01-01', totalVacation: 0, carryoverVacation: 0, remaining: 0, months: Array(12).fill(0).map(() => ({ days: '', count: 0 })) },
   { name: '유혜종', joinDate: '2024-06-01', totalVacation: 0, carryoverVacation: 0, remaining: 0, months: Array(12).fill(0).map(() => ({ days: '', count: 0 })) },
   { name: '고채린', joinDate: '2024-06-18', totalVacation: 0, carryoverVacation: 0, remaining: 0, months: Array(12).fill(0).map(() => ({ days: '', count: 0 })) },
@@ -183,7 +181,9 @@ function App() {
         const allMembers = initialMembers.map(member => {
           const existing = existingMembers.get(member.name);
           if (existing) {
-            return existing;
+            return {existing,
+                joinDate: member.joinDate,
+            };
           } else {
             // 새로운 멤버는 초기값으로 설정
             const totalVacation = calculateVacationDays(member.joinDate);
@@ -194,7 +194,33 @@ function App() {
             };
           }
         });
-        setMembers(allMembers);
+        // allMembers 배열이 Member 타입 배열이 되도록 변환
+        setMembers(
+          allMembers.map(item => {
+            if ('existing' in item && item.existing) {
+              // 기존 멤버 정보와 joinDate를 병합
+              return {
+                ...item.existing,
+                joinDate: item.joinDate, // Firestore에 저장된 joinDate가 아닌, initialMembers의 joinDate 사용
+              };
+            }
+            // 기존 멤버가 아니면 그대로 반환
+            return item;
+          })
+        );
+
+      
+        // 삭제 대상 찾기: Firestore에는 있는데 initialMembers에는 없는 경우
+      const initialNames = new Set(initialMembers.map(m => m.name));
+      const toDelete = arr.filter(m => !initialNames.has(m.name));
+
+      // Firestore에서 삭제
+      for (const member of toDelete) {
+        const docRef = snapshot.docs.find(doc => doc.data().name === member.name);
+        if (docRef) {
+          await deleteDoc(doc(db, 'members', docRef.id));
+        }
+      }
       } else {
         // Firestore에 데이터가 없으면 초기값 사용
         setMembers(initialMembers.map(member => {

@@ -198,16 +198,17 @@ function App() {
         setMembers(
           allMembers.map(item => {
             if ('existing' in item && item.existing) {
-              // 기존 멤버 정보와 joinDate를 병합
+              const merged = item as { existing: Member; joinDate: string; totalVacation: number };
               return {
-                ...item.existing,
-                joinDate: item.joinDate, // Firestore에 저장된 joinDate가 아닌, initialMembers의 joinDate 사용
+                ...merged.existing,
+                joinDate: merged.joinDate,
+                totalVacation: merged.totalVacation,
               };
             }
             // 기존 멤버가 아니면 그대로 반환
             return item;
-          })
-        );
+          }));
+       
 
       
         // 삭제 대상 찾기: Firestore에는 있는데 initialMembers에는 없는 경우
